@@ -76,4 +76,146 @@ campsiteRouter.route('/:campsiteId')
     .catch(err => next(err));
 });
 
+campsiteRouter.route('/:campsiteId/comments')
+.get((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(campsite.comments);
+        } else {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite) {
+            campsite.comments.push(req.body); // push new comment into comments array
+            campsite.save() // need to use this to save this particular campsite instance, the document itself
+            .then(campsite => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(campsite);
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.put((req, res) => {
+    res.statusCode = 403;
+    res.end(`PUT operation not supported on /campsites/${req.params.campsiteId}/comments`);
+})
+.delete((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite) {
+            // go through every comment and delete it individually
+            for (let i = (campsite.comments.length-1); i >= 0; i--) { 
+                campsite.comments.id(campsite.comments[i]._id).remove(); // by unique id
+            }
+            campsite.save()
+            .then(campsite => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(campsite);
+            })
+            .catch(err => next(err));
+        } else {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+campsiteRouter.route('/:campsiteId/comments/:commentId')
+.get((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite && campsite.comments.id(req.params.commentId)) { // retrieves the value of the subdocument with id passed in
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(campsite.comments.id(req.params.commentId));
+        } else if (!campsite) { //differentiates between a campsite error vs. comment error
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.post((req, res) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /campsites/${req.params.campsiteId}/comments/${req.params.commentId}`);
+})
+.put((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite && campsite.comments.id(req.params.commentId)) {
+            if (req.body.rating) { // update rating
+                campsite.comments.id(req.params.commentId).rating = req.body.rating;
+            }
+            if (req.body.text) { // update text
+                campsite.comments.id(req.params.commentId).text = req.body.text;
+            }
+            campsite.save() // don't update anything else! save updates.
+            .then(campsite => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(campsite);
+            })
+            .catch(err => next(err));
+        } else if (!campsite) {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete((req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite && campsite.comments.id(req.params.commentId)) {
+            campsite.comments.id(req.params.commentId).remove(); // grab comment by id
+            campsite.save() // save updates
+            .then(campsite => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(campsite);
+            })
+            .catch(err => next(err));
+        } else if (!campsite) {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
 module.exports = campsiteRouter;
