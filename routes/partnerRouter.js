@@ -1,53 +1,79 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const Partner = require('../models/partner');
 
 const partnerRouter = express.Router();
 
 partnerRouter.use(bodyParser.json());
 
-//.all = settings for all routing methods
-partnerRouter.route('/') // no path, set up in server.js
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next(); //goes to the NEXT relevant routing method; otherwise would just stop here
+partnerRouter.route('/')
+// get data for ALL of the partners
+.get((req, res, next) => {
+    Partner.find() // query database for ALL documents that were instantiated using the Partner model
+    .then(partners => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partners); // sends json data to the client in the response stream, automatically close the stream afterward. don't need res.end()
+    })
+    .catch(err => next(err)); // pass off the error to the overall error handler in the express application; already built
 })
-.get((req, res) => {
-    res.end('Will send all the partners to you');
-    //response code & headers are already set in app.all() method
-})
-.post((req, res) => {
-    res.end(`Will add the partner: ${req.body.name} with description: ${req.body.description}`);
+.post((req, res, next) => {
+    Partner.create(req.body) // create new Partner document & save to MongoDB server. automatically checks schema.
+    .then(partner => {
+        console.log('Partner Created ', partner);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
 .put((req, res) => {
-    res.statusCode = 403;
+    res.statusCode = 403; // not allowed
     res.end('PUT operation not supported on /partners');
 })
-.delete((req, res) => {
-    res.end('Deleting all partners');
+.delete((req, res, next) => {
+    Partner.deleteMany() // deletes all partners in partners collection (that were instantiated with Partner model)
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 partnerRouter.route('/:partnerId')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next(); //goes to the NEXT relevant routing method; otherwise would just stop here
-})
-.get((req, res) => {
-    res.end(`Will send details of the partner: ${req.params.partnerId} to you`);
+.get((req, res, next) => {
+    Partner.findById(req.params.partnerId) //gets parsed from HTTP request from whatever the user on theh client side typed in
+    .then(partner => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
 .post((req, res) => {
-    res.statusCode = 403;
+    res.statusCode = 403; // not allowed
     res.end(`POST operation not supported on /partners/${req.params.partnerId}`);
 })
-.put((req, res) => {
-    res.write(`Updating the partner: ${req.params.partnerId}\n`);
-    res.end(`Will update the partner: ${req.body.name}
-        with description: ${req.body.description}`);
+.put((req, res, next) => {
+    Partner.findByIdAndUpdate(req.params.partnerId, { // partner id
+        $set: req.body // update operator
+    }, { new: true }) // get back information about updated document as a result of this method
+    .then(partner => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
-.delete((req, res) => {
-    res.end(`Deleting partner: ${req.params.partnerId}`);
+.delete((req, res, next) => {
+    Partner.findByIdAndDelete(req.params.partnerId) // partner id
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
-
 
 module.exports = partnerRouter;
