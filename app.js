@@ -33,10 +33,43 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+//middleware
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+//authentication middleware before users have access to static files
+function auth(req, res, next) {
+  console.log(req.headers);
+  const authHeader = req.headers.authorization; //store authorization header
+  if (!authHeader) { //if null, then user hasn't put in a username/password yet
+      const err = new Error('You are not authenticated!'); //error message
+      res.setHeader('WWW-Authenticate', 'Basic'); //set header; server is requesting authentication with 'Basic' method
+      err.status = 401; //standard status code
+      return next(err); //authomatically send error message back & challenge client for credentials
+      //once user types in credentials, auth function repeats, and now there IS an authorization header, so this part is skipped
+  }
+
+  // there is an authorization header
+  // decodes & parses authorization header into array, with username & password
+  const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+  const user = auth[0];
+  const pass = auth[1];
+  if (user === 'admin' && pass === 'password') {
+      return next(); // authorized! access has now been granted
+  } else {
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');      
+      err.status = 401;
+      return next(err);
+  }
+}
+
+// actually use the auth middleware we set up above
+app.use(auth);
+
+//express.static middleware that serves static files to client
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
