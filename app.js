@@ -50,38 +50,22 @@ app.use(session({
   store: new FileStore()
 }));
 
-
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
 
 //authentication middleware before users have access to static files
 function auth(req, res, next) {
   console.log(req.session);
 
   if (!req.session.user) {
-    const authHeader = req.headers.authorization; //store authorization header
-    if (!authHeader) { //if null, then user hasn't put in a username/password yet
-        const err = new Error('You are not authenticated!'); //error message
-        res.setHeader('WWW-Authenticate', 'Basic'); //set header; server is requesting authentication with 'Basic' method
-        err.status = 401; //standard status code
-        return next(err); //authomatically send error message back & challenge client for credentials
-        //once user types in credentials, auth function repeats, and now there IS an authorization header, so this part is skipped
-    }
+    
+    const err = new Error('You are not authenticated!'); //error message
+    err.status = 401; //standard status code
+    return next(err); //authomatically send error message back & challenge client for credentials
+    //once user types in credentials, auth function repeats, and now there IS an authorization header, so this part is skipped
 
-    // there is an authorization header
-    // decodes & parses authorization header into array, with username & password
-    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const user = auth[0];
-    const pass = auth[1];
-    if (user === 'admin' && pass === 'password') {
-      req.session.user = 'admin';
-      return next(); // authorized! access has now been granted
-    } else {
-        const err = new Error('You are not authenticated!');
-        res.setHeader('WWW-Authenticate', 'Basic');      
-        err.status = 401;
-        return next(err);
-    }
-  } else { // if there is a signedCookie
-    if (req.session.user === 'admin') {
+  } else { // if there is a session
+    if (req.session.user === 'authenticated') {
       console.log('req.session:', req.session);
       return next(); // continue
     } else {
@@ -98,8 +82,6 @@ app.use(auth);
 //express.static middleware that serves static files to client
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/campsites', campsiteRouter);
 app.use('/promotions', promotionRouter);
 app.use('/partners', partnerRouter);
