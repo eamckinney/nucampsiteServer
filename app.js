@@ -3,6 +3,9 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
+  //require('session-file-store') returns a function, and then takes (session) as an argument
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -37,12 +40,23 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser('12345-67890-09876-54321')); // numbers are a "secret key", could be anything, so we can "sign" the cookie
+//app.use(cookieParser('12345-67890-09876-54321')); // numbers are a "secret key", could be anything, so we can "sign" the cookie
+
+app.use(session({
+  name: 'session-id',
+  secret: '12345-67890-09876-54321',
+  saveUninitialized: false, // won't get saved if it's an empty session
+  resave: false, //will NOT be re-saved after every request, if the request didn't change anything
+  store: new FileStore()
+}));
+
+
 
 //authentication middleware before users have access to static files
 function auth(req, res, next) {
-  if (!req.signedCookies.user) { //signedCookies property is provided by cookieParser
-    console.log(req.headers);
+  console.log(req.session);
+
+  if (!req.session.user) {
     const authHeader = req.headers.authorization; //store authorization header
     if (!authHeader) { //if null, then user hasn't put in a username/password yet
         const err = new Error('You are not authenticated!'); //error message
@@ -58,7 +72,7 @@ function auth(req, res, next) {
     const user = auth[0];
     const pass = auth[1];
     if (user === 'admin' && pass === 'password') {
-      res.cookie('user', 'admin', {signed: true}); // set up a cookie
+      req.session.user = 'admin';
       return next(); // authorized! access has now been granted
     } else {
         const err = new Error('You are not authenticated!');
@@ -67,7 +81,8 @@ function auth(req, res, next) {
         return next(err);
     }
   } else { // if there is a signedCookie
-    if (req.signedCookies.user === 'admin') { // if the user = 'admin'
+    if (req.session.user === 'admin') {
+      console.log('req.session:', req.session);
       return next(); // continue
     } else {
         const err = new Error('You are not authenticated!');
