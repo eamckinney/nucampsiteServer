@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const Partner = require('../models/partner');
+const authenticate = require('../authenticate');
+
 
 const partnerRouter = express.Router();
 
@@ -17,7 +19,7 @@ partnerRouter.route('/')
     })
     .catch(err => next(err)); // pass off the error to the overall error handler in the express application; already built
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Partner.create(req.body) // create new Partner document & save to MongoDB server. automatically checks schema.
     .then(partner => {
         console.log('Partner Created ', partner);
@@ -27,11 +29,11 @@ partnerRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403; // not allowed
     res.end('PUT operation not supported on /partners');
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Partner.deleteMany() // deletes all partners in partners collection (that were instantiated with Partner model)
     .then(response => {
         res.statusCode = 200;
@@ -51,11 +53,11 @@ partnerRouter.route('/:partnerId')
     })
     .catch(err => next(err));
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403; // not allowed
     res.end(`POST operation not supported on /partners/${req.params.partnerId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Partner.findByIdAndUpdate(req.params.partnerId, { // partner id
         $set: req.body // update operator
     }, { new: true }) // get back information about updated document as a result of this method
@@ -66,7 +68,7 @@ partnerRouter.route('/:partnerId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Partner.findByIdAndDelete(req.params.partnerId) // partner id
     .then(response => {
         res.statusCode = 200;

@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const Promotion = require('../models/promotion');
+const authenticate = require('../authenticate');
 
 const promotionRouter = express.Router();
 
@@ -17,7 +18,7 @@ promotionRouter.route('/')
     })
     .catch(err => next(err)); // pass off the error to the overall error handler in the express application; already built
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => {
     Promotion.create(req.body) // create new Promotion document & save to MongoDB server. automatically checks schema.
     .then(promotion => {
         console.log('Promotion Created ', promotion);
@@ -27,11 +28,11 @@ promotionRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403; // not allowed
     res.end('PUT operation not supported on /promotions');
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Promotion.deleteMany() // deletes all promotions in promotions collection (that were instantiated with Promotion model)
     .then(response => {
         res.statusCode = 200;
@@ -51,11 +52,11 @@ promotionRouter.route('/:promotionId')
     })
     .catch(err => next(err));
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403; // not allowed
     res.end(`POST operation not supported on /promotions/${req.params.promotionId}`);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, (req, res, next) => {
     Promotion.findByIdAndUpdate(req.params.promotionId, { // promotion id
         $set: req.body // update operator
     }, { new: true }) // get back information about updated document as a result of this method
@@ -66,7 +67,7 @@ promotionRouter.route('/:promotionId')
     })
     .catch(err => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, (req, res, next) => {
     Promotion.findByIdAndDelete(req.params.promotionId) // promotion id
     .then(response => {
         res.statusCode = 200;

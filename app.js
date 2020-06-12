@@ -1,13 +1,9 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-  //require('session-file-store') returns a function, and then takes (session) as an argument
 const passport = require('passport');
-const authenticate = require('./authenticate');
+const config = require('./config');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -18,7 +14,7 @@ const partnerRouter = require('./routes/partnerRouter');
 // connect to MongoDB server!
 const mongoose = require('mongoose');
 
-const url = 'mongodb://localhost:27017/nucampsite';
+const url = config.mongoUrl;
 const connect = mongoose.connect(url, {
     useCreateIndex: true,
     useFindAndModify: false,
@@ -44,39 +40,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //app.use(cookieParser('12345-67890-09876-54321')); // numbers are a "secret key", could be anything, so we can "sign" the cookie
 
-
-app.use(session({
-  name: 'session-id',
-  secret: '12345-67890-09876-54321',
-  saveUninitialized: false, // won't get saved if it's an empty session
-  resave: false, //will NOT be re-saved after every request, if the request didn't change anything
-  store: new FileStore()
-}));
-
 //check incoming requests to see if there is an existing session for the client
-//if so, then load the existing session and store in req.user
 app.use(passport.initialize());
-app.use(passport.session());
-
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-//authentication middleware before users have access to static files
-function auth(req, res, next) {
-  console.log(req.user);
-
-  if (!req.user) {
-      const err = new Error('You are not authenticated!');                    
-      err.status = 401;
-      return next(err);
-  } else {
-      return next();
-  }
-}
-
-// actually use the auth middleware we set up above
-app.use(auth);
 
 //express.static middleware that serves static files to client
 app.use(express.static(path.join(__dirname, 'public')));

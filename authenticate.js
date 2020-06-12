@@ -2,6 +2,13 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const User = require('./models/user');
 
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const jwt = require('jsonwebtoken'); // used to create, sign, and verify tokens
+
+const config = require('./config.js');
+
+
 //add specific strategy plugin to our passport implementation
 //User.authenticate() is from User schema/model
 exports.local = passport.use(new LocalStrategy(User.authenticate()));
@@ -9,3 +16,36 @@ exports.local = passport.use(new LocalStrategy(User.authenticate()));
 //whenever we use sessions of passport, need to serialize
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
+
+
+exports.getToken = function(user) {
+    return jwt.sign(user, config.secretKey, {expiresIn: 3600});
+};
+
+//configuration options
+const opts = {};
+opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken(); //how token should be extracted - send it to us in the header
+opts.secretOrKey = config.secretKey; //set to key we wrote in config.js
+
+exports.jwtPassport = passport.use(
+    new JwtStrategy(
+        opts,
+        (jwt_payload, done) => {
+            console.log('JWT payload:', jwt_payload);
+            //finds user document from jwt payload
+            User.findOne({_id: jwt_payload._id}, (err, user) => {
+                if (err) {
+                    return done(err, false);
+                } else if (user) {
+                    return done(null, user);
+                } else { //no erorr, but also no user was found
+                    return done(null, false);
+                }
+            });
+        }
+    )
+);
+
+//verifies that incoming request is from an authenticated user
+//we're NOT using sessions, we're jusing jwt strategy
+exports.verifyUser = passport.authenticate('jwt', {session: false});
