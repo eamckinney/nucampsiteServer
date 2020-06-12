@@ -6,6 +6,8 @@ var logger = require('morgan');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
   //require('session-file-store') returns a function, and then takes (session) as an argument
+const passport = require('passport');
+const authenticate = require('./authenticate');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -42,6 +44,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //app.use(cookieParser('12345-67890-09876-54321')); // numbers are a "secret key", could be anything, so we can "sign" the cookie
 
+
 app.use(session({
   name: 'session-id',
   secret: '12345-67890-09876-54321',
@@ -50,29 +53,25 @@ app.use(session({
   store: new FileStore()
 }));
 
+//check incoming requests to see if there is an existing session for the client
+//if so, then load the existing session and store in req.user
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
 //authentication middleware before users have access to static files
 function auth(req, res, next) {
-  console.log(req.session);
+  console.log(req.user);
 
-  if (!req.session.user) {
-    
-    const err = new Error('You are not authenticated!'); //error message
-    err.status = 401; //standard status code
-    return next(err); //authomatically send error message back & challenge client for credentials
-    //once user types in credentials, auth function repeats, and now there IS an authorization header, so this part is skipped
-
-  } else { // if there is a session
-    if (req.session.user === 'authenticated') {
-      console.log('req.session:', req.session);
-      return next(); // continue
-    } else {
-        const err = new Error('You are not authenticated!');
-        err.status = 401;
-        return next(err);
-    }
+  if (!req.user) {
+      const err = new Error('You are not authenticated!');                    
+      err.status = 401;
+      return next(err);
+  } else {
+      return next();
   }
 }
 
