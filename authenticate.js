@@ -49,3 +49,13 @@ exports.jwtPassport = passport.use(
 //verifies that incoming request is from an authenticated user
 //we're NOT using sessions, we're jusing jwt strategy
 exports.verifyUser = passport.authenticate('jwt', {session: false});
+
+exports.verifyAdmin = (req, res, next) => {
+    if (req.user.admin) {
+        return next();
+    } else {
+        err = new Error("You are not authorized to perform this operation!");
+        err.status = 403;
+        return next(err);
+    }
+}

@@ -18,7 +18,7 @@ promotionRouter.route('/')
     })
     .catch(err => next(err)); // pass off the error to the overall error handler in the express application; already built
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.create(req.body) // create new Promotion document & save to MongoDB server. automatically checks schema.
     .then(promotion => {
         console.log('Promotion Created ', promotion);
@@ -32,7 +32,7 @@ promotionRouter.route('/')
     res.statusCode = 403; // not allowed
     res.end('PUT operation not supported on /promotions');
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.deleteMany() // deletes all promotions in promotions collection (that were instantiated with Promotion model)
     .then(response => {
         res.statusCode = 200;
@@ -56,7 +56,7 @@ promotionRouter.route('/:promotionId')
     res.statusCode = 403; // not allowed
     res.end(`POST operation not supported on /promotions/${req.params.promotionId}`);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.findByIdAndUpdate(req.params.promotionId, { // promotion id
         $set: req.body // update operator
     }, { new: true }) // get back information about updated document as a result of this method
@@ -67,7 +67,7 @@ promotionRouter.route('/:promotionId')
     })
     .catch(err => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.findByIdAndDelete(req.params.promotionId) // promotion id
     .then(response => {
         res.statusCode = 200;
