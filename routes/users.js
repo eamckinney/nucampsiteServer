@@ -73,4 +73,13 @@ router.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
     }
 });
 
+router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res) => {
+    if (req.user) { // makes sure there is a valid user (there should be, the facebook strategy should have created one)
+        const token = authenticate.getToken({_id: req.user._id}); // new json web token
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json({success: true, token: token, status: 'You are successfully logged in!'});
+    }
+});
+
 module.exports = router;
